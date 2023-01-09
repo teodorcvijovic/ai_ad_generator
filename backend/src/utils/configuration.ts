@@ -5,6 +5,7 @@ export class Configuration {
     OPENAI_TEXT_URL = process.env.OPENAI_TEXT_URL
 
     TEMPERATURE = 0.8
-    TITLE_MAX_TOKENS = 32
+    TITLE_MAX_TOKENS = 7
+    CONTENT_MAX_TOKENS = 50
     TOP_P = 1
 }

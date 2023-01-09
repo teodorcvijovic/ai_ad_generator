@@ -4,14 +4,56 @@ const request = require("request");
 
 export class GeneratorController {
 
-    // function that invokes external OpenAPI and returns generated title
-    generateTitle = async (req, res) => {
+    // function that invokes external OpenAPI and returns generated content
+    generate = async (req, res) => {
+        try{
+            let responseBody = {
+                title: '',
+                content: '' 
+            }
 
-        // OpenAPI prompt
-        let prompt = req.body.prompt
+            // OpenAPI prompt
+            let prompt = req.body.prompt
 
-        // set the options for the request
-        const options = {
+            /********************* generate title ******************/
+
+            // response format: {code: ..., body: ...}
+            let response:any = await this.generateText(prompt, config.TITLE_MAX_TOKENS)
+
+            if (response.code != 200) {
+                // error
+                return res.status(response.code).send(response.body)
+            }
+            
+            // parse the result from the response
+            responseBody.title = response.body
+
+            /********************* generate content ******************/
+
+            // response format: {code: ..., body: ...}
+            response = await this.generateText(prompt, config.CONTENT_MAX_TOKENS)
+
+            if (response.code != 200) {
+                // error
+                return res.status(response.code).send(response.body)
+            }
+            
+            // parse the result from the response
+            responseBody.content = response.body
+
+            /********************************************************/
+
+            return res.send(responseBody)
+        }
+        catch(error) {
+            console.log(error)
+            return res.status(500).send({message: "Internal server error."})
+        }
+    }
+
+    generateText = async (prompt, maxTokens) => {
+         // set the options for the request
+         const options = {
             url: config.OPENAI_TEXT_URL,
             headers: {
                 'Content-Type': 'application/json',
@@ -26,10 +68,11 @@ export class GeneratorController {
                 'frequency_penalty': 0,
                 'presence_penalty': 0
             }
-        };
+        }
 
 
-        // send request to OpenAPI
+        // sends request to OpenAPI
+        // response format: {code: ..., body: ...}
         function sendRequest() {
             return new Promise((resolve, reject) => {
                 request.post(
@@ -42,14 +85,17 @@ export class GeneratorController {
                             // error occured
                             body = body.error
                         }
+                        else {
+                            // parse the result
+                            body = body.choices[0].text
+                        }
                         resolve({code, body})
                     }
-                );
+                )
             })
         }
 
         const response: any = await sendRequest();
-
-        return res.status(response.code).send(response.body)
+        return response
     }
 }
