@@ -1,5 +1,5 @@
 # AI ad generator
-Simple AI assistant for generating content in advertising space. MEAN stack application depending on OpenAI API.
+Simple AI assistant for generating content in advertising space. Express Node.js + Angular application depending on OpenAI API.
 #
 Express API
 Endpoint | Method | Authentication | Request body | Response body | Description
