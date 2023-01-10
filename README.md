@@ -1,4 +1,4 @@
-# AdOut
+# AI ad generator
 Simple AI assistant for generating content in advertising space. MEAN stack application depending on OpenAI API.
 #
 Express API
