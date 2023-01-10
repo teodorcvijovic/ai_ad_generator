@@ -9,7 +9,8 @@ export class GeneratorController {
         try{
             let responseBody = {
                 title: '',
-                content: '' 
+                content: '', 
+                images: []
             }
 
             // OpenAPI prompt
@@ -41,7 +42,20 @@ export class GeneratorController {
             // parse the result from the response
             responseBody.content = response.body
 
-            /********************************************************/
+            /********************* generate images *******************/
+
+            // response format: {code: ..., body: ...}
+            response = await this.generateImages(prompt, config.NUM_OF_IMAGES, config.IMAGE_WIDTH)
+
+            if (response.code != 200) {
+                // error
+                return res.status(response.code).send(response.body)
+            }
+            
+            // parse the result from the response
+            responseBody.images = response.body
+
+            /*********************************************************/
 
             return res.send(responseBody)
         }
@@ -51,6 +65,7 @@ export class GeneratorController {
         }
     }
 
+    // method should return generated text
     generateText = async (prompt, maxTokens) => {
          // set the options for the request
          const options = {
@@ -88,6 +103,56 @@ export class GeneratorController {
                         else {
                             // parse the result
                             body = body.choices[0].text
+                        }
+                        resolve({code, body})
+                    }
+                )
+            })
+        }
+
+        const response: any = await sendRequest();
+        return response
+    }
+
+    // method should return list of urls of generated images
+    generateImages = async (prompt, numOfImages, imageWidth) => {
+        // set the options for the request
+        const options = {
+            url: config.OPENAI_IMAGE_URL,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${config.OPENAI_API_KEY}`
+            },
+            json: {
+                'prompt': prompt,
+                'n': numOfImages,
+                'size': `${imageWidth}x${imageWidth}` 
+            }
+        }
+
+
+        // sends request to OpenAPI
+        // response format: {code: ..., body: ...}
+        function sendRequest() {
+            return new Promise((resolve, reject) => {
+                request.post(
+                    config.OPENAI_IMAGE_URL,
+                    options,
+                    // post callback
+                    function (error, response, body) {
+                        let code = response.statusCode
+                        if (code != 200) {
+                            // error occured
+                            body = body.error
+                        }
+                        else {
+                            // parse the result
+                            // body.data is array of json objects {'url': '...'}
+                            let result = []
+                            body.data.forEach(imageJSON => {
+                                result.push(imageJSON.url)
+                            });
+                            body = result
                         }
                         resolve({code, body})
                     }
