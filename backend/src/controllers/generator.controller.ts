@@ -1,6 +1,5 @@
 import config from '../server'
-
-const request = require("request");
+import { ExternalAPIRequests } from '../utils/externalAPIrequests'
 
 export class GeneratorController {
 
@@ -18,7 +17,6 @@ export class GeneratorController {
 
             /********************* generate title ******************/
 
-            // response format: {code: ..., body: ...}
             let response:any = await this.generateText(prompt, config.TITLE_MAX_TOKENS)
 
             if (response.code != 200) {
@@ -26,12 +24,11 @@ export class GeneratorController {
                 return res.status(response.code).send(response.body)
             }
             
-            // parse the result from the response
+            // get the result from the response
             responseBody.title = response.body
 
             /********************* generate content ******************/
 
-            // response format: {code: ..., body: ...}
             response = await this.generateText(prompt, config.CONTENT_MAX_TOKENS)
 
             if (response.code != 200) {
@@ -43,8 +40,7 @@ export class GeneratorController {
             responseBody.content = response.body
 
             /********************* generate images *******************/
-
-            // response format: {code: ..., body: ...}
+            
             response = await this.generateImages(prompt, config.NUM_OF_IMAGES, config.IMAGE_WIDTH)
 
             if (response.code != 200) {
@@ -52,7 +48,7 @@ export class GeneratorController {
                 return res.status(response.code).send(response.body)
             }
             
-            // parse the result from the response
+            // get the result from the response
             responseBody.images = response.body
 
             /*********************************************************/
@@ -66,6 +62,7 @@ export class GeneratorController {
     }
 
     // method should return generated text
+    // response format: {code: ..., body: ...}
     generateText = async (prompt, maxTokens) => {
          // set the options for the request
          const options = {
@@ -85,32 +82,15 @@ export class GeneratorController {
             }
         }
 
-
-        // sends request to OpenAPI
+        // send request to OpenAPI
         // response format: {code: ..., body: ...}
-        function sendRequest() {
-            return new Promise((resolve, reject) => {
-                request.post(
-                    config.OPENAI_TEXT_URL,
-                    options,
-                    // post callback
-                    function (error, response, body) {
-                        let code = response.statusCode
-                        if (code != 200) {
-                            // error occured
-                            body = body.error
-                        }
-                        else {
-                            // parse the result
-                            body = body.choices[0].text
-                        }
-                        resolve({code, body})
-                    }
-                )
-            })
+        const response: any = await ExternalAPIRequests.sendPostRequest(config.OPENAI_TEXT_URL, options);
+
+        if (response.code == 200) {
+            // parse result
+            response.body = response.body.choices[0].text
         }
 
-        const response: any = await sendRequest();
         return response
     }
 
@@ -133,34 +113,19 @@ export class GeneratorController {
 
         // sends request to OpenAPI
         // response format: {code: ..., body: ...}
-        function sendRequest() {
-            return new Promise((resolve, reject) => {
-                request.post(
-                    config.OPENAI_IMAGE_URL,
-                    options,
-                    // post callback
-                    function (error, response, body) {
-                        let code = response.statusCode
-                        if (code != 200) {
-                            // error occured
-                            body = body.error
-                        }
-                        else {
-                            // parse the result
-                            // body.data is array of json objects {'url': '...'}
-                            let result = []
-                            body.data.forEach(imageJSON => {
-                                result.push(imageJSON.url)
-                            });
-                            body = result
-                        }
-                        resolve({code, body})
-                    }
-                )
-            })
+        const response: any = await ExternalAPIRequests.sendPostRequest(config.OPENAI_IMAGE_URL, options)
+
+        if (response.code == 200) {
+            // parse result
+            let result = []
+            response.body.data.forEach(imageJSON => {
+                result.push(imageJSON.url)
+            });
+            response.body = result
         }
 
-        const response: any = await sendRequest();
         return response
     }
+
+    
 }
